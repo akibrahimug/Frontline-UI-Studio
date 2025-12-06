@@ -1,0 +1,99 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  workspaces        Workspace[]
+  componentVersions ComponentVersion[]
+  accounts          Account[]
+  sessions          Session[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model Workspace {
+  id        String   @id @default(cuid())
+  name      String
+  ownerId   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  owner      User        @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  components Component[]
+
+  @@map("workspaces")
+}
+
+model Component {
+  id          String   @id @default(cuid())
+  workspaceId String
+  name        String
+  slug        String
+  status      String   @default("draft") // "draft" | "canonical" | "deprecated"
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  versions  ComponentVersion[]
+
+  @@unique([workspaceId, slug])
+  @@map("components")
+}
+
+model ComponentVersion {
+  id                     String   @id @default(cuid())
+  componentId            String
+  version                String
+  sourceCodeOriginal     String   @db.Text
+  sourceCodeTransformed  String?  @db.Text
+  docsMarkdown           String?  @db.Text
+  createdById            String
+  createdAt              DateTime @default(now())
+
+  component Component @relation(fields: [componentId], references: [id], onDelete: Cascade)
+  createdBy User      @relation(fields: [createdById], references: [id])
+
+  @@map("component_versions")
+}
