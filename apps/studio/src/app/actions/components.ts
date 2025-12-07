@@ -149,3 +149,59 @@ export async function createComponentVersionAction(formData: FormData) {
   revalidatePath(`/components/${componentId}`);
   return componentVersion;
 }
+
+export async function getComponentVersionsAction(componentId: string) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    throw new Error("Unauthorized");
+  }
+
+  // Verify component access
+  const component = await db.component.findUnique({
+    where: {
+      id: componentId,
+    },
+    include: {
+      workspace: true,
+    },
+  });
+
+  if (!component || component.workspace.ownerId !== session.user.id) {
+    throw new Error("Component not found");
+  }
+
+  return db.componentVersion.findMany({
+    where: {
+      componentId,
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+}
+
+export async function getComponentVersionAction(versionId: string) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    throw new Error("Unauthorized");
+  }
+
+  const version = await db.componentVersion.findUnique({
+    where: {
+      id: versionId,
+    },
+    include: {
+      component: {
+        include: {
+          workspace: true,
+        },
+      },
+    },
+  });
+
+  if (!version || version.component.workspace.ownerId !== session.user.id) {
+    throw new Error("Version not found");
+  }
+
+  return version;
+}

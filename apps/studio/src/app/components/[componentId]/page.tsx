@@ -1,4 +1,4 @@
-import { getComponentAction } from "../../actions/components";
+import { getComponentAction, getComponentVersionsAction } from "../../actions/components";
 import Link from "next/link";
 import { ComponentEditor } from "./component-editor";
 
@@ -9,7 +9,7 @@ export default async function ComponentPage({
 }) {
   const { componentId } = await params;
   const component = await getComponentAction(componentId);
-  const latestVersion = component.versions[0];
+  const versions = await getComponentVersionsAction(componentId);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -43,7 +43,7 @@ export default async function ComponentPage({
           <p className="text-gray-600 dark:text-gray-400">Slug: {component.slug}</p>
         </div>
 
-        <ComponentEditor component={component} latestVersion={latestVersion} />
+        <ComponentEditor component={component} initialVersions={versions} />
       </div>
     </div>
   );
