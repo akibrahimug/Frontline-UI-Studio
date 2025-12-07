@@ -1,4 +1,3 @@
-// Placeholder for LLM integration
-// Will be implemented in a future phase
-
-export const TODO = "LLM integration coming soon";
+export { refactorComponent } from "./refactor";
+export type { LLMRefactorResult, Prop } from "./types";
+export { LLMRefactorResultSchema, PropSchema } from "./types";
