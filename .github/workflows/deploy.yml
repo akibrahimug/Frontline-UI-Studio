@@ -1,0 +1,48 @@
+name: Deploy
+
+on:
+  push:
+    branches: [master, main]
+
+env:
+  NODE_VERSION: "18"
+  PNPM_VERSION: "9.0.0"
+
+jobs:
+  # Create Sentry release
+  sentry-release:
+    name: Create Sentry Release
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Create Sentry release
+        uses: getsentry/action-release@v1
+        if: env.SENTRY_AUTH_TOKEN != ''
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+        with:
+          environment: production
+          version: ${{ github.sha }}
+          sourcemaps: "./apps/studio/.next"
+
+  # Notify deployment
+  notify:
+    name: Notify Deployment
+    runs-on: ubuntu-latest
+    needs: [sentry-release]
+    if: always()
+
+    steps:
+      - name: Deployment notification
+        run: |
+          echo "Deployment completed for commit: ${{ github.sha }}"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Status: ${{ job.status }}"
