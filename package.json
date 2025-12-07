@@ -5,7 +5,7 @@
   "scripts": {
     "build": "turbo build",
     "dev": "turbo dev",
-    "lint": "turbo lint",
+    "lint": "cd apps/studio && pnpm lint && cd .. && turbo lint",
     "test": "turbo test",
     "test:ui": "turbo test:ui",
     "test:coverage": "turbo test:coverage",
