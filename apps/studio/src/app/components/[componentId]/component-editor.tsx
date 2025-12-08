@@ -68,7 +68,7 @@ export function ComponentEditor({
         setVersions(updatedVersions);
 
         // Select the newly created version
-        const newVersion = updatedVersions.find((v) => v.id === result.versionId);
+        const newVersion = updatedVersions.find((v: ComponentVersion) => v.id === result.versionId);
         if (newVersion) {
           setSelectedVersion(newVersion);
           setSourceCode(newVersion.sourceCodeOriginal);
