@@ -44,7 +44,7 @@ describe("Button", () => {
 
 ### Configuration
 
-- `vitest.config.ts` - Vitest configuration
+- `vitest.config.mts` - Vitest configuration
 - `vitest.setup.ts` - Test setup (imports jest-dom matchers)
 
 ## E2E Testing with Playwright

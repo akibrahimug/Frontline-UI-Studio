@@ -2,23 +2,32 @@
 
 import { signIn } from "next-auth/react";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@refinery/ui";
 
 export default function SignInPage() {
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      await signIn("credentials", {
+      const result = await signIn("credentials", {
         email,
         name,
-        redirectTo: "/workspaces",
+        redirect: false,
       });
+
+      if (result?.ok) {
+        router.push("/workspaces");
+        router.refresh();
+      } else {
+        console.error("Sign in failed:", result?.error);
+      }
     } catch (error) {
       console.error("Sign in error:", error);
     } finally {
