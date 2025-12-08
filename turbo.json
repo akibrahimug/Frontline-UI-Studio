@@ -14,7 +14,6 @@
       "dependsOn": ["^build"]
     },
     "test": {
-      "dependsOn": ["^build"],
       "outputs": ["coverage/**"]
     },
     "test:ui": {
@@ -22,7 +21,6 @@
       "persistent": true
     },
     "test:coverage": {
-      "dependsOn": ["^build"],
       "outputs": ["coverage/**"]
     },
     "test:e2e": {

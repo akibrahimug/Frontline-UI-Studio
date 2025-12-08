@@ -11,11 +11,17 @@ export default defineConfig({
     pool: "forks",
     poolOptions: {
       forks: {
-        singleFork: process.env.CI === "true",
+        singleFork: true,
       },
     },
     testTimeout: 10000,
     hookTimeout: 10000,
+    teardownTimeout: 10000,
+    // Ensure tests don't run in watch mode
+    watch: false,
+    // Limit parallelism in CI
+    fileParallelism: process.env.CI === "true" ? false : true,
+    maxConcurrency: process.env.CI === "true" ? 1 : 5,
     coverage: {
       provider: "v8",
       reporter: ["text", "json", "html"],
