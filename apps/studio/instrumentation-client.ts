@@ -17,11 +17,11 @@ Sentry.init({
 
   // You can remove this option if you're not planning to use the Sentry Session Replay feature:
   integrations: [
-    // Sentry.replayIntegration({
-    //   // Additional Replay configuration goes in here, for example:
-    //   maskAllText: true,
-    //   blockAllMedia: true,
-    // }),
+    Sentry.replayIntegration({
+      // Additional Replay configuration goes in here, for example:
+      maskAllText: true,
+      blockAllMedia: true,
+    }),
   ],
 
   // Note: if you want to override the automatic release value, do not set a

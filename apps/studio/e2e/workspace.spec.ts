@@ -4,9 +4,12 @@ async function login(page: Page) {
   await page.goto("/auth/signin");
   await page.getByLabel(/email/i).fill("test.user@example.com");
   await page.getByLabel(/name/i).fill("Test User");
-  await page.getByRole("button", { name: /sign in/i }).click();
-  // Assert auth worked before continuing
-  await expect(page).toHaveURL(/\/workspaces/);
+
+  // Wait for navigation after clicking sign in
+  await Promise.all([
+    page.waitForURL(/\/workspaces/, { timeout: 10000 }),
+    page.getByRole("button", { name: /sign in/i }).click(),
+  ]);
 }
 
 test.describe("Workspace Management", () => {
