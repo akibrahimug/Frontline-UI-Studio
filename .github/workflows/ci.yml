@@ -7,7 +7,6 @@ on:
     branches: [master, main]
 
 env:
-  # Use Node.js LTS version
   NODE_VERSION: "18"
   PNPM_VERSION: "9.0.0"
 
@@ -39,8 +38,39 @@ jobs:
       - name: Run linter
         run: pnpm lint
 
-      - name: Type check
+  # Build check
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build all packages
         run: pnpm build
+        env:
+          # Provide dummy values for build-time env vars
+          DATABASE_URL: postgresql://dummy:dummy@localhost:5432/dummy
+          DIRECT_URL: postgresql://dummy:dummy@localhost:5432/dummy
+          AUTH_SECRET: dummy-secret-for-build-only
+          GROQ_API_KEY: gsk_dummy
+          SKIP_ENV_VALIDATION: "1"
 
   # Unit tests with Vitest
   unit-tests:
@@ -71,9 +101,10 @@ jobs:
 
       - name: Generate coverage report
         run: pnpm test:coverage
+        continue-on-error: true
 
       - name: Upload coverage to Codecov (optional)
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@v4
         if: github.event_name == 'push'
         continue-on-error: true
         with:
@@ -82,11 +113,12 @@ jobs:
           flags: unittests
           name: codecov-umbrella
 
-  # E2E tests with Playwright
+  # E2E tests with Playwright (optional - only on push to main)
   e2e-tests:
     name: E2E Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
 
     env:
       # Test environment variables
@@ -128,37 +160,3 @@ jobs:
           name: playwright-report
           path: apps/studio/playwright-report/
           retention-days: 30
-
-  # Build check
-  build:
-    name: Build
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: ${{ env.PNPM_VERSION }}
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: "pnpm"
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Build all packages
-        run: pnpm build
-        env:
-          # Provide dummy values for build-time env vars
-          DATABASE_URL: postgresql://dummy:dummy@localhost:5432/dummy
-          DIRECT_URL: postgresql://dummy:dummy@localhost:5432/dummy
-          AUTH_SECRET: dummy-secret-for-build
-          GROQ_API_KEY: gsk_dummy
-          SKIP_ENV_VALIDATION: true

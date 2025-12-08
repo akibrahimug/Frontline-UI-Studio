@@ -2,11 +2,19 @@ import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  transpilePackages: ["@refinery/ui", "@refinery/core"],
+  transpilePackages: ["@refinery/ui", "@refinery/core", "@refinery/llm"],
   experimental: {
     serverActions: {
       bodySizeLimit: "2mb",
     },
+  },
+  webpack: (config) => {
+    // Exclude test config files from build
+    config.module.rules.push({
+      test: /\.(vitest|playwright)\.config\.(ts|js)$/,
+      use: "ignore-loader",
+    });
+    return config;
   },
 };
 
