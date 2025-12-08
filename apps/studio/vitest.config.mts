@@ -13,6 +13,15 @@ export default defineConfig({
       "**/.next/**",
       "**/e2e/**", // Exclude Playwright E2E tests
     ],
+    // CI-specific settings to prevent hanging
+    pool: "forks",
+    poolOptions: {
+      forks: {
+        singleFork: process.env.CI === "true",
+      },
+    },
+    testTimeout: 10000,
+    hookTimeout: 10000,
     coverage: {
       provider: "v8",
       reporter: ["text", "json", "html"],
