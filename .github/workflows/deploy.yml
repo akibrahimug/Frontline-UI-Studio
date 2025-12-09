@@ -58,12 +58,12 @@ jobs:
         with:
           server_address: ${{ secrets.MAIL_SERVER || 'smtp.gmail.com' }}
           server_port: ${{ secrets.MAIL_PORT || '587' }}
-          secure: true
           username: ${{ secrets.MAIL_USERNAME }}
           password: ${{ secrets.MAIL_PASSWORD }}
           subject: "${{ steps.status.outputs.status }} Deployment - ${{ github.repository }}"
           to: ${{ vars.NOTIFICATION_EMAIL }}
           from: ${{ secrets.MAIL_FROM || secrets.MAIL_USERNAME }}
+          convert_markdown: true
           body: |
             Deployment Status: ${{ steps.status.outputs.status }}
 
