@@ -37,7 +37,12 @@ test.describe("Workspace Management", () => {
     }
 
     await page.getByRole("button", { name: /save|create/i }).click();
-    await expect(page.getByText(workspaceName)).toBeVisible();
+
+    // Wait for navigation to the workspace details page
+    await page.waitForURL(/\/workspaces\/[a-z0-9-]+$/, { timeout: 10000 });
+
+    // Verify we're on the details page with the workspace name
+    await expect(page.getByRole("heading", { name: workspaceName })).toBeVisible();
   });
 
   test("should navigate to workspace details", async ({ page }) => {
