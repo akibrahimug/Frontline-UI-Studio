@@ -47,7 +47,7 @@ describe("Button", () => {
 - `vitest.config.mts` - Vitest configuration
   - Uses `pool: "forks"` with `singleFork` mode in CI to prevent hanging
   - Sets timeouts (10s) to ensure tests don't hang indefinitely
-  - Configured for jsdom environment for React component testing
+  - Configured for happy-dom environment for React component testing (faster and more CI-compatible than jsdom)
 - `vitest.setup.ts` - Test setup (imports jest-dom matchers)
 
 ## E2E Testing with Playwright
