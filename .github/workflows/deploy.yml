@@ -41,8 +41,46 @@ jobs:
     if: always()
 
     steps:
-      - name: Deployment notification
+      - name: Determine deployment status
+        id: status
+        run: |
+          if [ "${{ needs.sentry-release.result }}" == "success" ]; then
+            echo "status=✅ Success" >> $GITHUB_OUTPUT
+            echo "color=green" >> $GITHUB_OUTPUT
+          else
+            echo "status=❌ Failed" >> $GITHUB_OUTPUT
+            echo "color=red" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Send email notification
+        uses: dawidd6/action-send-mail@v3
+        if: vars.NOTIFICATION_EMAIL != ''
+        with:
+          server_address: ${{ secrets.MAIL_SERVER || 'smtp.gmail.com' }}
+          server_port: ${{ secrets.MAIL_PORT || '587' }}
+          secure: true
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: "${{ steps.status.outputs.status }} Deployment - ${{ github.repository }}"
+          to: ${{ vars.NOTIFICATION_EMAIL }}
+          from: ${{ secrets.MAIL_FROM || secrets.MAIL_USERNAME }}
+          body: |
+            Deployment Status: ${{ steps.status.outputs.status }}
+
+            Repository: ${{ github.repository }}
+            Branch: ${{ github.ref_name }}
+            Commit: ${{ github.sha }}
+            Commit Message: ${{ github.event.head_commit.message }}
+            Author: ${{ github.event.head_commit.author.name }}
+
+            Workflow: ${{ github.workflow }}
+            Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+            Triggered by: ${{ github.actor }}
+            Time: ${{ github.event.head_commit.timestamp }}
+
+      - name: Log notification status
         run: |
           echo "Deployment completed for commit: ${{ github.sha }}"
           echo "Branch: ${{ github.ref_name }}"
-          echo "Status: ${{ job.status }}"
+          echo "Status: ${{ steps.status.outputs.status }}"
