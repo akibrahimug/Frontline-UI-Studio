@@ -102,8 +102,13 @@ jobs:
       - name: Generate Prisma Client
         run: cd packages/core && pnpm db:generate
 
-      - name: Run unit tests
-        run: pnpm test
+      - name: Run UI package tests
+        run: cd packages/ui && pnpm test
+        timeout-minutes: 3
+
+      - name: Run Studio tests
+        run: cd apps/studio && pnpm test
+        timeout-minutes: 3
 
       - name: Generate coverage report
         run: pnpm test:coverage
