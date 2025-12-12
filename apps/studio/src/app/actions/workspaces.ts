@@ -1,7 +1,7 @@
 "use server";
 
 import { auth } from "@/../../auth";
-import { db, getUserWorkspaces, assertWorkspaceMember } from "@refinery/core";
+import { db } from "@refinery/core";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -16,17 +16,10 @@ export async function createWorkspaceAction(formData: FormData) {
     throw new Error("Workspace name is required");
   }
 
-  // Create workspace and auto-add owner as member
   const workspace = await db.workspace.create({
     data: {
       name,
       ownerId: session.user.id,
-      members: {
-        create: {
-          userId: session.user.id,
-          role: "owner",
-        },
-      },
     },
   });
 
@@ -40,8 +33,14 @@ export async function listWorkspacesForUserAction() {
     return [];
   }
 
-  // Return all workspaces where user is a member (not just owner)
-  return getUserWorkspaces(session.user.id);
+  return db.workspace.findMany({
+    where: {
+      ownerId: session.user.id,
+    },
+    orderBy: {
+      updatedAt: "desc",
+    },
+  });
 }
 
 export async function getWorkspaceAction(workspaceId: string) {
@@ -50,8 +49,16 @@ export async function getWorkspaceAction(workspaceId: string) {
     throw new Error("Unauthorized");
   }
 
-  // Check membership instead of ownership
-  const member = await assertWorkspaceMember(workspaceId, session.user.id);
+  const workspace = await db.workspace.findUnique({
+    where: {
+      id: workspaceId,
+      ownerId: session.user.id,
+    },
+  });
 
-  return member.workspace;
+  if (!workspace) {
+    throw new Error("Workspace not found");
+  }
+
+  return workspace;
 }

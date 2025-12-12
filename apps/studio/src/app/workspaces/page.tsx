@@ -1,14 +1,12 @@
 import { listWorkspacesForUserAction } from "../actions/workspaces";
 import { Button } from "@refinery/ui";
 import Link from "next/link";
-import { Header } from "@/components/header";
 
 export default async function WorkspacesPage() {
   const workspaces = await listWorkspacesForUserAction();
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <Header />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex justify-between items-center mb-8">
           <div>

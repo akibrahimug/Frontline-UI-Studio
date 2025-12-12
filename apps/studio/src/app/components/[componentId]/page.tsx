@@ -1,7 +1,6 @@
 import { getComponentAction, getComponentVersionsAction } from "../../actions/components";
 import Link from "next/link";
 import { ComponentEditor } from "./component-editor";
-import { Header } from "@/components/header";
 
 export default async function ComponentPage({
   params,
@@ -14,7 +13,6 @@ export default async function ComponentPage({
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <Header />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-6">
           <Link
