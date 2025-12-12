@@ -15,10 +15,13 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  workspaces        Workspace[]
-  componentVersions ComponentVersion[]
-  accounts          Account[]
-  sessions          Session[]
+  workspaces            Workspace[]
+  workspaceMembers      WorkspaceMember[]
+  componentVersions     ComponentVersion[]
+  accounts              Account[]
+  sessions              Session[]
+  sentInvitations       WorkspaceInvitation[]
+  activityLogs          ActivityLog[]
 
   @@map("users")
 }
@@ -54,14 +57,19 @@ model Session {
 }
 
 model Workspace {
-  id        String   @id @default(cuid())
-  name      String
-  ownerId   String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(cuid())
+  name        String
+  ownerId     String
+  isPublic    Boolean  @default(false)
+  publicSlug  String?  @unique
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
-  owner      User        @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  components Component[]
+  owner        User                  @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  members      WorkspaceMember[]
+  components   Component[]
+  invitations  WorkspaceInvitation[]
+  activityLogs ActivityLog[]
 
   @@map("workspaces")
 }
@@ -75,10 +83,12 @@ model Component {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  workspace Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  versions  ComponentVersion[]
+  workspace       Workspace          @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  versions        ComponentVersion[]
+  analyticsEvents AnalyticsEvent[]
 
   @@unique([workspaceId, slug])
+  @@index([workspaceId, status])
   @@map("components")
 }
 
@@ -89,11 +99,85 @@ model ComponentVersion {
   sourceCodeOriginal     String   @db.Text
   sourceCodeTransformed  String?  @db.Text
   docsMarkdown           String?  @db.Text
+  isCanonical            Boolean  @default(false)
   createdById            String
   createdAt              DateTime @default(now())
 
-  component Component @relation(fields: [componentId], references: [id], onDelete: Cascade)
-  createdBy User      @relation(fields: [createdById], references: [id])
+  component          Component   @relation(fields: [componentId], references: [id], onDelete: Cascade)
+  createdBy          User        @relation(fields: [createdById], references: [id])
 
+  @@index([componentId, isCanonical])
   @@map("component_versions")
+}
+
+model AnalyticsEvent {
+  id          String   @id @default(cuid())
+  workspaceId String
+  componentId String
+  eventType   String   // e.g. "component_viewed", "docs_viewed", "refactor_run"
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  component Component @relation(fields: [componentId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, createdAt])
+  @@index([componentId, eventType])
+  @@index([eventType, createdAt])
+  @@map("analytics_events")
+}
+
+model WorkspaceMember {
+  id          String   @id @default(cuid())
+  workspaceId String
+  userId      String
+  role        String   // "owner" | "editor" | "viewer"
+  createdAt   DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+  @@index([userId])
+  @@map("workspace_members")
+}
+
+model WorkspaceInvitation {
+  id           String    @id @default(cuid())
+  workspaceId  String
+  inviterId    String
+  inviteeEmail String
+  role         String    // "editor" | "viewer"
+  status       String    @default("pending") // "pending" | "accepted" | "declined" | "expired"
+  token        String    @unique @default(cuid())
+  expiresAt    DateTime
+  createdAt    DateTime  @default(now())
+  respondedAt  DateTime?
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  inviter   User      @relation(fields: [inviterId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([inviteeEmail])
+  @@index([token])
+  @@index([status])
+  @@map("workspace_invitations")
+}
+
+model ActivityLog {
+  id          String   @id @default(cuid())
+  workspaceId String
+  userId      String
+  action      String   // e.g. "member_added", "component_created", "role_changed", etc.
+  entityType  String?  // "workspace" | "component" | "member" | "invitation"
+  entityId    String?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, createdAt])
+  @@index([userId, createdAt])
+  @@index([action, createdAt])
+  @@map("activity_logs")
 }
