@@ -1,7 +1,7 @@
 "use server";
 
 import { auth } from "@/../../auth";
-import { db } from "@refinery/core";
+import { db, assertWorkspaceMember, assertComponentAccess } from "@refinery/core";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
@@ -26,17 +26,8 @@ export async function createComponentAction(formData: FormData) {
     throw new Error("Workspace ID and component name are required");
   }
 
-  // Verify workspace ownership
-  const workspace = await db.workspace.findUnique({
-    where: {
-      id: workspaceId,
-      ownerId: session.user.id,
-    },
-  });
-
-  if (!workspace) {
-    throw new Error("Workspace not found");
-  }
+  // Verify workspace membership
+  await assertWorkspaceMember(workspaceId, session.user.id);
 
   const slug = slugify(name);
 
@@ -59,21 +50,24 @@ export async function listComponentsAction(workspaceId: string) {
     return [];
   }
 
-  // Verify workspace ownership
-  const workspace = await db.workspace.findUnique({
-    where: {
-      id: workspaceId,
-      ownerId: session.user.id,
-    },
-  });
-
-  if (!workspace) {
-    throw new Error("Workspace not found");
-  }
+  // Verify workspace membership
+  await assertWorkspaceMember(workspaceId, session.user.id);
 
   return db.component.findMany({
     where: {
       workspaceId,
+    },
+    include: {
+      versions: {
+        select: {
+          id: true,
+          version: true,
+          isCanonical: true,
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+      },
     },
     orderBy: {
       updatedAt: "desc",
@@ -87,6 +81,10 @@ export async function getComponentAction(componentId: string) {
     throw new Error("Unauthorized");
   }
 
+  // Verify component access via workspace membership
+  await assertComponentAccess(componentId, session.user.id);
+
+  // Fetch component with versions (access already verified)
   const component = await db.component.findUnique({
     where: {
       id: componentId,
@@ -102,7 +100,7 @@ export async function getComponentAction(componentId: string) {
     },
   });
 
-  if (!component || component.workspace.ownerId !== session.user.id) {
+  if (!component) {
     throw new Error("Component not found");
   }
 
@@ -123,19 +121,8 @@ export async function createComponentVersionAction(formData: FormData) {
     throw new Error("Component ID, version, and source code are required");
   }
 
-  // Verify component access
-  const component = await db.component.findUnique({
-    where: {
-      id: componentId,
-    },
-    include: {
-      workspace: true,
-    },
-  });
-
-  if (!component || component.workspace.ownerId !== session.user.id) {
-    throw new Error("Component not found");
-  }
+  // Verify component access via workspace membership
+  await assertComponentAccess(componentId, session.user.id);
 
   const componentVersion = await db.componentVersion.create({
     data: {
@@ -156,19 +143,8 @@ export async function getComponentVersionsAction(componentId: string) {
     throw new Error("Unauthorized");
   }
 
-  // Verify component access
-  const component = await db.component.findUnique({
-    where: {
-      id: componentId,
-    },
-    include: {
-      workspace: true,
-    },
-  });
-
-  if (!component || component.workspace.ownerId !== session.user.id) {
-    throw new Error("Component not found");
-  }
+  // Verify component access via workspace membership
+  await assertComponentAccess(componentId, session.user.id);
 
   return db.componentVersion.findMany({
     where: {
@@ -199,9 +175,66 @@ export async function getComponentVersionAction(versionId: string) {
     },
   });
 
-  if (!version || version.component.workspace.ownerId !== session.user.id) {
+  if (!version) {
     throw new Error("Version not found");
   }
 
+  // Verify component access via workspace membership
+  await assertComponentAccess(version.componentId, session.user.id);
+
   return version;
+}
+
+export async function setCanonicalVersionAction(versionId: string) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    throw new Error("Unauthorized");
+  }
+
+  // Get the version and verify access
+  const version = await db.componentVersion.findUnique({
+    where: {
+      id: versionId,
+    },
+    include: {
+      component: {
+        include: {
+          workspace: true,
+        },
+      },
+    },
+  });
+
+  if (!version) {
+    throw new Error("Version not found");
+  }
+
+  // Verify component access via workspace membership
+  await assertComponentAccess(version.componentId, session.user.id);
+
+  // Unset all other canonical versions for this component
+  await db.componentVersion.updateMany({
+    where: {
+      componentId: version.componentId,
+      isCanonical: true,
+    },
+    data: {
+      isCanonical: false,
+    },
+  });
+
+  // Set this version as canonical
+  const updatedVersion = await db.componentVersion.update({
+    where: {
+      id: versionId,
+    },
+    data: {
+      isCanonical: true,
+    },
+  });
+
+  revalidatePath(`/components/${version.componentId}`);
+  revalidatePath(`/workspaces/${version.component.workspaceId}`);
+
+  return updatedVersion;
 }
