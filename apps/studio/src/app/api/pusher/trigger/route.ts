@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/../../auth";
 import { triggerCollaborativeEdit, assertComponentAccess } from "@refinery/core";
+import { rateLimiters, getRequestIdentifier } from "@/lib/rate-limit";
 
 export async function POST(req: NextRequest) {
   try {
@@ -13,6 +14,28 @@ export async function POST(req: NextRequest) {
 
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // Apply rate limiting
+    const identifier = getRequestIdentifier(req, session.user.id);
+    const rateLimitResult = rateLimiters.pusher.check(identifier);
+
+    if (!rateLimitResult.allowed) {
+      return NextResponse.json(
+        {
+          error: "Too many requests",
+          retryAfter: rateLimitResult.retryAfter,
+        },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": String(rateLimitResult.retryAfter),
+            "X-RateLimit-Limit": "60",
+            "X-RateLimit-Remaining": "0",
+            "X-RateLimit-Reset": String(rateLimitResult.reset),
+          },
+        }
+      );
     }
 
     const body = await req.json();
@@ -41,7 +64,13 @@ export async function POST(req: NextRequest) {
       value,
     });
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true }, {
+      headers: {
+        "X-RateLimit-Limit": "60",
+        "X-RateLimit-Remaining": String(rateLimitResult.remaining),
+        "X-RateLimit-Reset": String(rateLimitResult.reset),
+      },
+    });
   } catch (error) {
     console.error("Pusher trigger error:", error);
     return NextResponse.json(
