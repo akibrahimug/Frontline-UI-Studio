@@ -8,18 +8,17 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "2mb",
     },
   },
-  webpack: (config, { isServer }) => {
+  // Trace Prisma binaries for Vercel deployment
+  outputFileTracingIncludes: {
+    "/": ["../../node_modules/.prisma/client/**/*"],
+    "/*": ["../../node_modules/@prisma/client/**/*"],
+  },
+  webpack: (config) => {
     // Exclude test config files from build
     config.module.rules.push({
       test: /\.(vitest|playwright)\.config\.(ts|js)$/,
       use: "ignore-loader",
     });
-
-    // Externalize Prisma for server builds (Vercel serverless compatibility)
-    if (isServer) {
-      config.externals = config.externals || [];
-      config.externals.push("@prisma/client", "_http_common");
-    }
 
     return config;
   },
