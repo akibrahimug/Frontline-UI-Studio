@@ -8,12 +8,19 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "2mb",
     },
   },
-  webpack: (config) => {
+  webpack: (config, { isServer }) => {
     // Exclude test config files from build
     config.module.rules.push({
       test: /\.(vitest|playwright)\.config\.(ts|js)$/,
       use: "ignore-loader",
     });
+
+    // Externalize Prisma for server builds (Vercel serverless compatibility)
+    if (isServer) {
+      config.externals = config.externals || [];
+      config.externals.push("@prisma/client", "_http_common");
+    }
+
     return config;
   },
 };
