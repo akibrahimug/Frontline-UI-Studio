@@ -1,6 +1,5 @@
 {
-  "buildCommand": "pnpm build",
+  "buildCommand": "pnpm turbo build --filter=@refinery/studio",
   "installCommand": "pnpm install",
-  "framework": null,
   "outputDirectory": "apps/studio/.next"
 }
